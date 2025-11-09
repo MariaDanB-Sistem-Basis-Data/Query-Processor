@@ -7,3 +7,6 @@
 [submodule "Concurrency-Control-Manager"]
 	path = Concurrency-Control-Manager
 	url = https://github.com/MariaDanB-Sistem-Basis-Data/Concurrency-Control-Manager.git
+[submodule "Failure-Recovery-Manager"]
+	path = Failure-Recovery-Manager
+	url = https://github.com/MariaDanB-Sistem-Basis-Data/Failure-Recovery-Manager.git
