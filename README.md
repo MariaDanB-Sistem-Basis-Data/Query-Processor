@@ -3,3 +3,6 @@
 
 > [!NOTE]
 > udah tanya kakas, harusnya `git submodule update --init --recursive --remote`
+
+> [!WARNING]
+> pycache dari repo lain ada yang ga diignore, jadi waktu nge run kadang pycache di repo mereka keganti, itu discard aja changesnya
