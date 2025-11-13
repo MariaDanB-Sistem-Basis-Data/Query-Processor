@@ -9,6 +9,8 @@ from storage_manager.model.condition import Condition
 from query_optimizer.QueryOptimizer import OptimizationEngine
 from query_optimizer.model.query_tree import QueryTree
 
+from concurrency_control_manager.ConcurrencyControlManager import ConcurrencyControlManager
+
 class QueryExecutor:
     def __init__(self) -> None:
         self.storage_manager = StorageManager()
@@ -386,6 +388,7 @@ class QueryExecutor:
         return Rows.from_list(result)
 
     # placeholder untuk SORT operation (ORDER BY)
+    
     def _apply_sort(self, data: Rows, column: str) -> Rows:
         return Rows.from_list([{"info": "SORT operation - to be implemented"}])
 
@@ -476,10 +479,24 @@ class QueryExecutor:
 
     # placeholder BEGIN TRANSACTION
     def execute_begin_transaction(self, query: str) -> Union[Rows, int]:
-        return Rows.from_list(["BEGIN TRANSACTION - to be implemented"])
+        '''
+        algorithm
+        1. create a new transaction
+        2. begin transaction
+        3. return the Union[Rows, int]'''
+        ccm = ConcurrencyControlManager()
+        transaction_id = ccm.begin_transaction()
+        print(f"Running transaction with id {transaction_id}")
+        ccm.commit_transaction(transaction_id)
+        return Rows.from_list([transaction_id])
 
     # placeholder COMMIT 
     def execute_commit(self, query: str) -> Union[Rows, int]:
+        '''
+        algorithm
+        1. get the latest transaction id of a new transaction
+        2. commit transaction
+        3. return the Union[Rows, int]'''
         return Rows.from_list(["COMMIT - to be implemented"])
 
     # abort transaction - rollback all changes in current transaction
@@ -488,11 +505,14 @@ class QueryExecutor:
             # abort the current transaction and rollback all changes
             # this will discard any modifications made within the transaction
             abort_result = self._rollback_transaction()
+            ccm = ConcurrencyControlManager()
+            transaction_id = ccm.begin_transaction()
+            ccm.abort_transaction(transaction_id)
             
             if abort_result:
-                return Rows.from_list(["ABORT completed successfully"])
+                return Rows.from_list([f"ABORT {transaction_id} completed successfully"])
             else:
-                return Rows.from_list(["ABORT failed - no active transaction"])
+                return Rows.from_list([f"ABORT {transaction_id} failed - no active transaction"])
                 
         except Exception as e:
             print(f"Error executing ABORT: {e}")
