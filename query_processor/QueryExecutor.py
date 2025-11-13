@@ -2,9 +2,9 @@ from typing import Union
 
 from query_processor.model.Rows import Rows
 from storage_manager.StorageManager import StorageManager
-from storage_manager.model.data_retrieval import DataRetrieval
-from storage_manager.model.data_write import DataWrite
-from storage_manager.model.condition import Condition
+from storage_manager.storagemanager_model.data_retrieval import DataRetrieval
+from storage_manager.storagemanager_model.data_write import DataWrite
+from storage_manager.storagemanager_model.condition import Condition
 
 from query_optimizer.QueryOptimizer import OptimizationEngine
 from query_optimizer.model.query_tree import QueryTree
