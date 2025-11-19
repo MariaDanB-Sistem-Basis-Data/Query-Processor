@@ -1,10 +1,13 @@
 from typing import Union, List
+import re
+import os
 
 from query_processor.model.Rows import Rows
 from storage_manager.StorageManager import StorageManager
 from storage_manager.storagemanager_model.data_retrieval import DataRetrieval
 from storage_manager.storagemanager_model.data_write import DataWrite
 from storage_manager.storagemanager_model.condition import Condition
+from storage_manager.storagemanager_helper.schema import Schema
 
 from query_optimizer.QueryOptimizer import OptimizationEngine
 from query_optimizer.model.query_tree import QueryTree
@@ -601,8 +604,74 @@ class QueryExecutor:
         return Rows.from_list(["DELETE - to be implemented (info delete block)"])
 
     # NOTE: lagi2, sepertinya emng kudu pahamin dulu kerjaan orang TT
+    # Ensure Schema is imported or available in this file
+    # from .schema import Schema 
+
     def execute_create_table(self, query: str) -> Union[Rows, int]:
-        return Rows.from_list(["CREATE TABLE - to be implemented (info cara bikin tabel dari storagemngr)"])
+        """
+        Executes a CREATE TABLE query.
+        Format: CREATE TABLE table_name (col1 type, col2 type(size))
+        """
+        # pattern CREATE TABLE <name> (<columns>)
+        match = re.search(r"(?i)CREATE\s+TABLE\s+(\w+)\s*\((.+)\)", query)
+        if not match:
+            return Rows.from_list(["Syntax Error: Invalid CREATE TABLE format."])
+
+        table_name = match.group(1)
+        columns_part = match.group(2)
+
+        # existence
+        if self.storage_manager.schema_manager.get_table_schema(table_name):
+             return Rows.from_list([f"Error: Table '{table_name}' already exists."])
+
+        new_schema = Schema()
+        
+        # NOTE: assumes no commas inside the column definition itself
+        columns = [c.strip() for c in columns_part.split(',')]
+
+        for col_def in columns:
+            # expected formats: "id int" or "name varchar(50)"
+            # aga PR si ini
+            parts = col_def.split()
+            if len(parts) < 2:
+                continue # skip invalid definitions
+                
+            col_name = parts[0]
+            raw_type = parts[1]
+            
+            col_type = raw_type.lower()
+            col_size = 0
+
+            # handle Varchar/Char with size (e.g., varchar(50))
+            if '(' in raw_type and ')' in raw_type:
+                type_match = re.match(r"(\w+)\((\d+)\)", raw_type)
+                if type_match:
+                    col_type = type_match.group(1).lower()
+                    col_size = int(type_match.group(2))
+            
+            # handle integers (fixed size 4 bytes)
+            elif col_type in ['int', 'integer']:
+                col_size = 4
+            
+            # add to schema
+            try:
+                new_schema.add_attribute(col_name, col_type, col_size)
+            except ValueError as e:
+                 return Rows.from_list([f"Error: {str(e)}"])
+
+        # save to Schema Manager
+        self.storage_manager.schema_manager.add_table_schema(table_name, new_schema)
+        self.storage_manager.schema_manager.save_schemas()
+
+        # physical data file 
+        file_path = os.path.join(self.storage_manager.base_path, f"{table_name}.dat")
+        try:
+            with open(file_path, 'wb') as f:
+                pass # Create empty file
+        except IOError as e:
+            return Rows.from_list([f"Error creating table file: {str(e)}"])
+
+        return Rows.from_list([f"Table '{table_name}' created successfully."])
 
     def execute_drop_table(self, query: str) -> Union[Rows, int]:
         return Rows.from_list(["DROP TABLE - to be implemented (info cara drop tabel dari storagemngr)"])

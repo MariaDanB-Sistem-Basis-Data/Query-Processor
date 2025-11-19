@@ -115,6 +115,15 @@ def demo_insert_queries():
         print(f"   Rows: {verify.data.rows_count}")
         print(f"   Data: {verify.data.data}")
 
+def demo_create_table():
+    print("\n" + "="*70)
+    print("DEMO: CREATE TABLE")
+    print("="*70)
+
+    qp = QueryProcessor()
+    res = qp.execute_query("CREATE TABLE mahasiswa (id int, name varchar(50), age int)")
+    print("CREATE TABLE RES:", res)
+
 
 if __name__ == "__main__":
     # demos
@@ -122,3 +131,4 @@ if __name__ == "__main__":
     demo_update_queries()
     demo_transaction_queries()
     demo_insert_queries()
+    # demo_create_table()
