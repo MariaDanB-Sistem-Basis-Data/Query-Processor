@@ -594,11 +594,7 @@ class QueryProcessor:
             print(f"Error executing INSERT: {e}")
             return -1
 
-    # parse DELETE (dari optimizer) & panggil delete_block dari storage manager
-    # NOTE,TODO: StorageManager.delete_block blum diimplement
     def execute_delete(self, query: str) -> Union[Rows, int]:
-        """
-        # harusnya kaya gini sih nanti
         try:
             parsed = None
             try:
@@ -626,11 +622,16 @@ class QueryProcessor:
             if not table_name:
                 return Rows.from_list([f"DELETE parsing failed - no table found"])
 
-            cond_objs = [cond for cond in (self._parse_condition(c) for c in conditions) if cond] if conditions else []
+            first_condition = conditions[0] if conditions else None # dari spek cuma consider 1 condition aja
+            if first_condition.__class__.__name__ != "ConditionNode":
+                print("Error: DELETE only supports one condition")
+                return -1
+
+            cond_objs = [self._parse_condition(f"{first_condition.attr} {first_condition.op} {first_condition.value}")] if first_condition else []
 
             try:
                 data_deletion = self._data_write_factory(
-                    table=table_name,
+                    table=repr(table_name),
                     column="*",
                     conditions=cond_objs,
                     new_value=None,
@@ -644,18 +645,11 @@ class QueryProcessor:
             except Exception as e:
                 print(f"Error calling StorageManager.delete_block: {e}")
 
-            # NOTE: alasan sama, storage manager blum impelemnt delete_block
-            return Rows.from_list([f"DELETE not performed: storage manager delete_block not implemented for table '{table_name}' WHERE {conditions}"])
+            return Rows.from_list(["DELETE executed - storage manager returned no status"])
 
         except Exception as e:
             print(f"Error executing DELETE: {e}")
             return -1
-        """
-        return Rows.from_list(["DELETE - to be implemented (info delete block)"])
-
-    # NOTE: lagi2, sepertinya emng kudu pahamin dulu kerjaan orang TT
-    # Ensure Schema is imported or available in this file
-    # from .schema import Schema 
 
     def execute_create_table(self, query: str) -> Union[Rows, int]:
         """
@@ -779,5 +773,6 @@ class QueryProcessor:
         except Exception as e:
             print(f"Error rolling back transaction: {e}")
             return False
+
 
 
