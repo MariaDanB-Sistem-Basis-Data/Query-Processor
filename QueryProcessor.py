@@ -308,7 +308,6 @@ class QueryProcessor:
         
         return Rows.from_list(result)
     
-    # natural join berdasarkan kolom dengan nilai yang sama
     def _natural_join(self, left_rows: list, right_rows: list) -> list:
         result = []
         
@@ -327,7 +326,7 @@ class QueryProcessor:
         for left_row in left_rows:
             for right_row in right_rows:
                 # cek apakah semua common columns memiliki nilai yang sama
-                match = all(left_row.get(col) == right_row.get(col) for col in common_cols)
+                match = all(left_row[col] == right_row[col] for col in common_cols)
                 
                 if match:
                     # combine rows, common columns dari left_row
@@ -339,7 +338,6 @@ class QueryProcessor:
         
         return result
     
-    # theta join berdasarkan kondisi
     def _theta_join(self, left_rows: list, right_rows: list, condition: str) -> list:
         result = []
         
@@ -347,20 +345,20 @@ class QueryProcessor:
             # jika tidak ada condition, return cartesian product
             return self._cartesian_join(left_rows, right_rows)
         
-        # parse condition: format "left_col op right_col" atau "left_col op value"
-        operators = [">=", "<=", "!=", "=", ">", "<"]
-        operator = None
-        left_col = None
-        right_col_or_value = None
-        
-        for op in operators:
-            if op in condition:
-                parts = condition.split(op)
-                left_col = parts[0].strip()
-                right_col_or_value = parts[1].strip().strip("'\"")
-                operator = op
-                break
-        
+        # parse condition: contoh "THETA:Cond(Student.StudentID = Attends.StudentID)"
+        left_table_name = condition.split("(")[1].split(" ")[0].split(".")[0]
+        left_col = condition.split("(")[1].split(" ")[0].split(".")[1]
+
+        try:
+            right_table_name = ""
+            right_col_or_value = str(float(condition.split(" ")[2].split(")")[0]))
+        except:
+            right_table_name = condition.split(" ")[2].split(")")[0].split(".")[0]
+            right_col_or_value = condition.split(" ")[2].split(")")[0].split(".")
+            right_col_or_value = right_col_or_value[len(right_col_or_value)-1]
+
+        operator = condition.split(" ")[1]
+
         if not operator or not left_col:
             return self._cartesian_join(left_rows, right_rows)
         
@@ -371,15 +369,31 @@ class QueryProcessor:
                     if left_col in left_row:
                         left_val = left_row[left_col]
                         
-                        # cek apakah right_col_or_value adalah kolom di right_row
+                        # print(left_row)
+                        # print(right_row)
+                        # cek apakah right_col_or_value adalah kolom di right_row, kalo engga berarti value apa gitu
+                        is_value = False
                         if right_col_or_value in right_row:
                             right_val = right_row[right_col_or_value]
                         else:
                             right_val = right_col_or_value
+                            is_value = True
                         
+                        # print(left_val, right_val)
+
                         # evaluasi condition
                         if self._evaluate_condition(left_val, operator, right_val):
-                            combined = {**left_row, **right_row}
+                            left_row_final = copy.deepcopy(left_row)
+                            right_row_final = copy.deepcopy(right_row)
+
+                            if left_col != right_col_or_value:
+                                for key in left_row:
+                                    if key in right_row and key:
+                                        left_row_final[left_table_name + "." + key] = left_row_final.pop(key)
+                                        right_row_final[right_table_name + "." + key] = right_row_final.pop(key)
+
+                            combined = {**left_row_final, **right_row_final}
+                            # print(combined)
                             result.append(combined)
         
         return result
